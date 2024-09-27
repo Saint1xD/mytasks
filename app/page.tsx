@@ -13,11 +13,16 @@ export default function TaskPage() {
   const [tasks, setTasks] = useState<Task[]>([])
 
   useEffect(() => {
-    setTasks(getTasks())
+    const fetchTasks = async () => {
+      const fetchedTasks = await getTasks()
+      setTasks(fetchedTasks)
+    }
+    fetchTasks()
   }, [])
 
-  const handleDataChange = () => {
-    setTasks(getTasks())
+  const handleDataChange = async () => {
+    const fetchedTasks = await getTasks()
+    setTasks(fetchedTasks)
   }
 
   return (

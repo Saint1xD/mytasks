@@ -1,45 +1,48 @@
 import { Task } from './schema'
-import { v4 as uuidv4 } from 'uuid'
-import initialTasks from './tasks.json'
 
-let tasks: Task[] = initialTasks
+const API_URL = 'http://localhost:8080'
 
-export const getTasks = () => tasks
-
-export const addTask = (title: string, status: string, priority: string) => {
-  const newTask: Task = {
-    id: uuidv4(),
-    title,
-    status,
-    priority,
-    label
-  }
-  tasks.push(newTask)
-  return newTask
+export const getTasks = async (): Promise<Task[]> => {
+  const response = await fetch(`${API_URL}/tasks`)
+  return response.json()
 }
 
-export const updateTaskStatus = (id: string, status: string) => {
-  const task = tasks.find(t => t.id === id)
-  if (task) {
-    task.status = status
-    return task
-  }
-  return null
+export const addTask = async (title: string, status: string, priority: string, label: string): Promise<Task> => {
+  const response = await fetch(`${API_URL}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title, status, priority, label }),
+  })
+  return response.json()
 }
 
-export const updateTaskPriority = (id: string, priority: string) => {
-  const task = tasks.find(t => t.id === id)
-  if (task) {
-    task.priority = priority
-    return task
-  }
-  return null
+export const updateTaskStatus = async (id: string, status: string): Promise<Task | null> => {
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  })
+  return response.ok ? response.json() : null
 }
 
-export const deleteTask = (id: string) => {
-  const index = tasks.findIndex(t => t.id === id)
-  if (index !== -1) {
-    return tasks.splice(index, 1)[0]
-  }
-  return null
+export const updateTaskPriority = async (id: string, priority: string): Promise<Task | null> => {
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ priority }),
+  })
+  return response.ok ? response.json() : null
+}
+
+export const deleteTask = async (id: string): Promise<boolean> => {
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'DELETE',
+  })
+  return response.ok
 }

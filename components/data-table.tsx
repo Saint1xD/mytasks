@@ -80,9 +80,9 @@ export function DataTable<TData, TValue>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (newTaskTitle.trim()) {
-      addTask(newTaskTitle, newTaskStatus, newTaskPriority)
+      await addTask(newTaskTitle, newTaskStatus, newTaskPriority, "default")
       setNewTaskTitle("")
       setNewTaskStatus("todo")
       setNewTaskPriority("medium")

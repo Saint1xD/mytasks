@@ -33,18 +33,18 @@ export function DataTableRowActions<TData>({
 }: DataTableRowActionsProps<TData>) {
   const task = taskSchema.parse(row.original)
 
-  const handleStatusChange = (status: string) => {
-    updateTaskStatus(task.id, status)
+  const handleStatusChange = async (status: string) => {
+    await updateTaskStatus(task.id, status)
     onTaskUpdate()
   }
 
-  const handlePriorityChange = (priority: string) => {
-    updateTaskPriority(task.id, priority)
+  const handlePriorityChange = async (priority: string) => {
+    await updateTaskPriority(task.id, priority)
     onTaskUpdate()
   }
 
-  const handleDelete = () => {
-    deleteTask(task.id)
+  const handleDelete = async () => {
+    await deleteTask(task.id)
     onTaskUpdate()
   }
 
