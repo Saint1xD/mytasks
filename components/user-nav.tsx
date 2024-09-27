@@ -1,3 +1,4 @@
+import { useTheme } from "next-themes"
 import {
   Avatar,
   AvatarFallback,
@@ -16,6 +17,8 @@ import {
 } from "./ui/dropdown-menu"
 
 export function UserNav() {
+  const { setTheme } = useTheme()
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -51,6 +54,16 @@ export function UserNav() {
           </DropdownMenuItem>
           <DropdownMenuItem>New Team</DropdownMenuItem>
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setTheme("light")}>
+          Light Mode
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setTheme("dark")}>
+          Dark Mode
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setTheme("system")}>
+          System
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           Log out

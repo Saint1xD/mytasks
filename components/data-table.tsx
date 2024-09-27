@@ -57,6 +57,7 @@ export function DataTable<TData, TValue>({
   const [newTaskTitle, setNewTaskTitle] = useState("")
   const [newTaskStatus, setNewTaskStatus] = useState("todo")
   const [newTaskPriority, setNewTaskPriority] = useState("medium")
+  const [newTaskLabel, setNewTaskLabel] = useState("default")
 
   const table = useReactTable({
     data,
@@ -82,10 +83,11 @@ export function DataTable<TData, TValue>({
 
   const handleAddTask = async () => {
     if (newTaskTitle.trim()) {
-      await addTask(newTaskTitle, newTaskStatus, newTaskPriority, "default")
+      await addTask(newTaskTitle, newTaskStatus, newTaskPriority, newTaskLabel)
       setNewTaskTitle("")
       setNewTaskStatus("todo")
       setNewTaskPriority("medium")
+      setNewTaskLabel("default")
       setIsAddTaskOpen(false)
       onDataChange()
     }
@@ -128,6 +130,18 @@ export function DataTable<TData, TValue>({
                 {priorities.map((priority) => (
                   <SelectItem key={priority.value} value={priority.value}>
                     {priority.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={newTaskLabel} onValueChange={setNewTaskLabel}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select label" />
+              </SelectTrigger>
+              <SelectContent>
+                {labels.map((label) => (
+                  <SelectItem key={label.value} value={label.value}>
+                    {label.label}
                   </SelectItem>
                 ))}
               </SelectContent>

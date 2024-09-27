@@ -20,7 +20,7 @@ import {
 
 import { priorities, statuses } from "../data/data"
 import { taskSchema } from "../data/schema"
-import { updateTaskStatus, updateTaskPriority, deleteTask } from "../data/taskManager"
+import { updateTask, deleteTask } from "../data/taskManager"
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
@@ -33,13 +33,9 @@ export function DataTableRowActions<TData>({
 }: DataTableRowActionsProps<TData>) {
   const task = taskSchema.parse(row.original)
 
-  const handleStatusChange = async (status: string) => {
-    await updateTaskStatus(task.id, status)
-    onTaskUpdate()
-  }
-
-  const handlePriorityChange = async (priority: string) => {
-    await updateTaskPriority(task.id, priority)
+  const handleChange = async (field: string, value: string) => {
+    const updatedTask = { ...task, [field]: value }
+    await updateTask(updatedTask)
     onTaskUpdate()
   }
 
@@ -63,7 +59,7 @@ export function DataTableRowActions<TData>({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={task.status} onValueChange={handleStatusChange}>
+            <DropdownMenuRadioGroup value={task.status} onValueChange={(value) => handleChange("status", value)}>
               {statuses.map((status) => (
                 <DropdownMenuRadioItem key={status.value} value={status.value}>
                   {status.label}
@@ -75,10 +71,22 @@ export function DataTableRowActions<TData>({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Priority</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={task.priority} onValueChange={handlePriorityChange}>
+            <DropdownMenuRadioGroup value={task.priority} onValueChange={(value) => handleChange("priority", value)}>
               {priorities.map((priority) => (
                 <DropdownMenuRadioItem key={priority.value} value={priority.value}>
                   {priority.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Label</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup value={task.label} onValueChange={(value) => handleChange("label", value)}>
+              {labels.map((label) => (
+                <DropdownMenuRadioItem key={label.value} value={label.value}>
+                  {label.label}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
