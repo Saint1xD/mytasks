@@ -118,6 +118,8 @@ export const columns: ColumnDef<Task>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => <DataTableRowActions row={row} />,
+    cell: ({ row, table }) => (
+      <DataTableRowActions row={row} onTaskUpdate={() => table.options.meta?.refreshData()} />
+    ),
   },
 ]

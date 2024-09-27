@@ -27,15 +27,21 @@ import {
 
 import { DataTablePagination } from "./data-table-pagination"
 import { DataTableToolbar } from "./data-table-toolbar"
+import { addTask } from "@/data/taskManager"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { useState } from "react"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  onDataChange: () => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onDataChange,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -44,6 +50,7 @@ export function DataTable<TData, TValue>({
     []
   )
   const [sorting, setSorting] = React.useState<SortingState>([])
+  const [newTaskTitle, setNewTaskTitle] = useState("")
 
   const table = useReactTable({
     data,
@@ -67,9 +74,25 @@ export function DataTable<TData, TValue>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
+  const handleAddTask = () => {
+    if (newTaskTitle.trim()) {
+      addTask(newTaskTitle, "todo", "medium", "bug")
+      setNewTaskTitle("")
+      onDataChange()
+    }
+  }
+
   return (
     <div className="space-y-4">
       <DataTableToolbar table={table} />
+      <div className="flex space-x-2 mb-4">
+        <Input
+          placeholder="New task title"
+          value={newTaskTitle}
+          onChange={(e) => setNewTaskTitle(e.target.value)}
+        />
+        <Button onClick={handleAddTask}>Add Task</Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
