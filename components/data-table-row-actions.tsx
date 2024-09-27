@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 
-import { priorities, statuses } from "../data/data"
+import { labels, priorities, statuses } from "../data/data"
 import { taskSchema } from "../data/schema"
 import { updateTask, deleteTask } from "../data/taskManager"
 
