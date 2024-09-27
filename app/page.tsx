@@ -16,6 +16,10 @@ export default function TaskPage() {
     setTasks(getTasks())
   }, [])
 
+  const handleDataChange = () => {
+    setTasks(getTasks())
+  }
+
   return (
     <>
       <div className="md:hidden">
@@ -46,7 +50,7 @@ export default function TaskPage() {
             <UserNav />
           </div>
         </div>
-        <DataTable data={tasks} columns={columns} onDataChange={() => {}} />
+        <DataTable data={tasks} columns={columns} onDataChange={handleDataChange} />
       </div>
     </>
   )

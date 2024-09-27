@@ -27,10 +27,13 @@ import {
 
 import { DataTablePagination } from "./data-table-pagination"
 import { DataTableToolbar } from "./data-table-toolbar"
-import { addTask } from "@/data/taskManager"
-import { Button } from "./ui/button"
-import { Input } from "./ui/input"
 import { useState } from "react"
+import { Button } from "./ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Input } from "./ui/input"
+import { addTask } from "@/data/taskManager"
+import { statuses, priorities } from "@/data/data"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -50,7 +53,10 @@ export function DataTable<TData, TValue>({
     []
   )
   const [sorting, setSorting] = React.useState<SortingState>([])
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState("")
+  const [newTaskStatus, setNewTaskStatus] = useState("todo")
+  const [newTaskPriority, setNewTaskPriority] = useState("medium")
 
   const table = useReactTable({
     data,
@@ -76,8 +82,11 @@ export function DataTable<TData, TValue>({
 
   const handleAddTask = () => {
     if (newTaskTitle.trim()) {
-      addTask(newTaskTitle, "todo", "medium", "bug")
+      addTask(newTaskTitle, newTaskStatus, newTaskPriority)
       setNewTaskTitle("")
+      setNewTaskStatus("todo")
+      setNewTaskPriority("medium")
+      setIsAddTaskOpen(false)
       onDataChange()
     }
   }
@@ -85,14 +94,48 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <DataTableToolbar table={table} />
-      <div className="flex space-x-2 mb-4">
-        <Input
-          placeholder="New task title"
-          value={newTaskTitle}
-          onChange={(e) => setNewTaskTitle(e.target.value)}
-        />
-        <Button onClick={handleAddTask}>Add Task</Button>
-      </div>
+      <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
+        <DialogTrigger asChild>
+          <Button>Add Task</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Task</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Input
+              placeholder="Task title"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+            />
+            <Select value={newTaskStatus} onValueChange={setNewTaskStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={newTaskPriority} onValueChange={setNewTaskPriority}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                {priorities.map((priority) => (
+                  <SelectItem key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleAddTask}>Add Task</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

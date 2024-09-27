@@ -1,11 +1,12 @@
 import { Task } from './schema'
 import { v4 as uuidv4 } from 'uuid'
+import initialTasks from './tasks.json'
 
-let tasks: Task[] = []
+let tasks: Task[] = initialTasks
 
 export const getTasks = () => tasks
 
-export const addTask = (title: string, status: string, priority: string, label: string) => {
+export const addTask = (title: string, status: string, priority: string) => {
   const newTask: Task = {
     id: uuidv4(),
     title,
