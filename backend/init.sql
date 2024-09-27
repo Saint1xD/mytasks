@@ -7,8 +7,8 @@ CREATE TABLE tasks (
 );
 
 INSERT INTO tasks (title, status, label, priority) VALUES
-('Implementar autenticação', 'todo', 'feature', 'high'),
-('Corrigir bug na página inicial', 'in progress', 'bug', 'medium'),
-('Atualizar documentação', 'done', 'documentation', 'low'),
-('Otimizar consultas do banco de dados', 'backlog', 'performance', 'medium'),
-('Adicionar testes unitários', 'todo', 'testing', 'high');
+('Implement authentication', 'todo', 'feature', 'high'),
+('Fix bug on home page', 'in progress', 'bug', 'medium'),
+('Update documentation', 'done', 'documentation', 'low'),
+('Optimize database queries', 'backlog', 'performance', 'medium'),
+('Add unit tests', 'todo', 'testing', 'high');
