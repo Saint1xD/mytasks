@@ -1,6 +1,6 @@
 import { Task } from './schema'
 
-const API_URL = 'http://localhost:8080'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 export const getTasks = async (): Promise<Task[]> => {
   const response = await fetch(`${API_URL}/tasks`)
