@@ -13,6 +13,9 @@ RUN go mod download
 # Copy the source code into the container
 COPY . .
 
+# Copy the init.sql file
+COPY init.sql .
+
 # Build the application
 RUN go build -o main .
 
