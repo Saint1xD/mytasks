@@ -119,7 +119,7 @@ export const columns: ColumnDef<Task>[] = [
   {
     id: "actions",
     cell: ({ row, table }) => (
-      <DataTableRowActions row={row} onTaskUpdate={() => table.options.meta?.refreshData()} />
+      <DataTableRowActions row={row} onTaskUpdate={() => (table.options.meta as { refreshData: () => void })?.refreshData()} />
     ),
   },
 ]
