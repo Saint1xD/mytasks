@@ -15,7 +15,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Tasks",
-  description: "A task and issue tracker build using Tanstack Table.",
+  description: "A task and issue tracker built using Tanstack Table.",
 }
 
 export default function RootLayout({

@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Metadata } from "next"
 import Image from "next/image"
 
 import { columns } from "@/components/columns"
@@ -9,11 +8,6 @@ import { DataTable } from "@/components/data-table"
 import { UserNav } from "@/components/user-nav"
 import { getTasks } from "@/data/taskManager"
 import { Task } from "@/data/schema"
-
-export const metadata: Metadata = {
-  title: "Tasks",
-  description: "A task and issue tracker build using Tanstack Table.",
-}
 
 export default function TaskPage() {
   const [tasks, setTasks] = useState<Task[]>([])
