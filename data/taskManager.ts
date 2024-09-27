@@ -18,24 +18,13 @@ export const addTask = async (title: string, status: string, priority: string, l
   return response.json()
 }
 
-export const updateTaskStatus = async (id: string, status: string): Promise<Task | null> => {
-  const response = await fetch(`${API_URL}/tasks/${id}`, {
+export const updateTask = async (task: Task): Promise<Task | null> => {
+  const response = await fetch(`${API_URL}/tasks/${task.id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ status }),
-  })
-  return response.ok ? response.json() : null
-}
-
-export const updateTaskPriority = async (id: string, priority: string): Promise<Task | null> => {
-  const response = await fetch(`${API_URL}/tasks/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ priority }),
+    body: JSON.stringify(task),
   })
   return response.ok ? response.json() : null
 }
