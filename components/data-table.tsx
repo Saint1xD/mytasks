@@ -27,7 +27,7 @@ import {
 
 import { DataTablePagination } from "./data-table-pagination"
 import { DataTableToolbar } from "./data-table-toolbar"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
