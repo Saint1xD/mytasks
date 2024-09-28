@@ -44,6 +44,11 @@ export function DataTableRowActions<TData>({
     onTaskUpdate()
   }
 
+  useEffect(() => {
+    // Atualiza o componente quando a tarefa muda
+    onTaskUpdate()
+  }, [task])
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

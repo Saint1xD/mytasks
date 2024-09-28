@@ -25,6 +25,14 @@ export default function TaskPage() {
     setTasks(fetchedTasks)
   }
 
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const fetchedTasks = await getTasks()
+      setTasks(fetchedTasks)
+    }
+    fetchTasks()
+  }, [])
+
   return (
     <>
       <div className="md:hidden">

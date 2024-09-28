@@ -59,6 +59,10 @@ export function DataTable<TData, TValue>({
   const [newTaskPriority, setNewTaskPriority] = useState("medium")
   const [newTaskLabel, setNewTaskLabel] = useState("default")
 
+  const refreshData = useCallback(() => {
+    onDataChange()
+  }, [onDataChange])
+
   const table = useReactTable({
     data,
     columns,
@@ -79,6 +83,9 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    meta: {
+      refreshData,
+    },
   })
 
   const handleAddTask = async () => {
