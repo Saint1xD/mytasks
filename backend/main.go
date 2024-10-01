@@ -73,7 +73,7 @@ func main() {
 }
 
 func getTasks(w http.ResponseWriter, r *http.Request) {
-	// log.Println("Fetching tasks...")
+	// log.Println("Fetching tasks...")     // Uncomment to log each request to the /tasks endpoint
 	rows, err := db.Query("SELECT id, title, description, status, label, priority FROM tasks")
 	if err != nil {
 		log.Println("Error querying tasks: ", err)
@@ -102,7 +102,7 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 		tasks = append(tasks, t)
 	}
 
-	// log.Printf("Returning %d tasks\n", len(tasks))
+	// log.Printf("Returning %d tasks\n", len(tasks))      // Uncomment to log the number of tasks on each request
 	json.NewEncoder(w).Encode(tasks)
 }
 
