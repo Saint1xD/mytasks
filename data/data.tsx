@@ -22,6 +22,10 @@ export const labels = [
     value: "documentation",
     label: "Documentation",
   },
+  {
+    value: "improvement",
+    label: "Improvement",
+  },
 ]
 
 export const statuses = [

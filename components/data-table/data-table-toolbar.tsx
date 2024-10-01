@@ -3,21 +3,24 @@
 import { Cross2Icon } from "@radix-ui/react-icons"
 import { Table } from "@tanstack/react-table"
 
-import { Button } from "./ui/button"
-import { Input } from "./ui/input"
-import { DataTableViewOptions } from "./ui/datatable"
+import { Button } from "../ui/button"
+import { Input } from "../ui/input"
+import { DataTableViewOptions } from "../ui/datatable"
 
-import { priorities, statuses } from "../data/data"
+import { priorities, statuses } from "../../data/data"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
+  onDeleteSelected: (ids: string[]) => void
 }
 
-export function DataTableToolbar<TData>({
+export function DataTableToolbar<TData extends { id: string }>({
   table,
+  onDeleteSelected,
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0
+  const selectedRows = table.getFilteredSelectedRowModel().rows
 
   return (
     <div className="flex items-center justify-between">
@@ -55,6 +58,15 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
+      {selectedRows.length > 0 && (
+        <Button
+          variant="destructive"
+          onClick={() => onDeleteSelected(selectedRows.map(row => row.original.id))}
+          className="h-8 px-2 lg:px-3"
+        >
+          Delete Selected ({selectedRows.length})
+        </Button>
+      )}
       <DataTableViewOptions table={table} />
     </div>
   )

@@ -133,3 +133,7 @@ dist
 
 aider.conf.yml
 .aider*
+
+
+.build_counter
+build_counter

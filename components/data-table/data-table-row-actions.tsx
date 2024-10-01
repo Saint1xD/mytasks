@@ -3,7 +3,7 @@
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { Row } from "@tanstack/react-table"
 
-import { Button } from "./ui/button"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,38 +16,23 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu"
 
-import { labels, priorities, statuses } from "../data/data"
-import { taskSchema } from "../data/schema"
-import { updateTask, deleteTask } from "../data/taskManager"
-import { useEffect } from "react"
+import { labels, priorities, statuses } from "@/data/data"
+import { taskSchema, Task } from "@/types/schema"
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
-  onTaskUpdate: () => void
+  onTaskUpdate: (task: Task) => void
+  onTaskDelete: (taskId: string) => void
 }
 
 export function DataTableRowActions<TData>({
   row,
-  onTaskUpdate
+  onTaskUpdate,
+  onTaskDelete
 }: DataTableRowActionsProps<TData>) {
   const task = taskSchema.parse(row.original)
-
-  const handleChange = async (field: string, value: string) => {
-    const updatedTask = { ...task, [field]: value }
-    await updateTask(updatedTask)
-    onTaskUpdate()
-  }
-
-  const handleDelete = async () => {
-    await deleteTask(task.id)
-    onTaskUpdate()
-  }
-
-  useEffect(() => {
-    onTaskUpdate()
-  }, [onTaskUpdate, task])
 
   return (
     <DropdownMenu>
@@ -62,11 +47,15 @@ export function DataTableRowActions<TData>({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[160px]">
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger className="cursor-pointer">Status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={task.status} onValueChange={(value) => handleChange("status", value)}>
+            <DropdownMenuRadioGroup value={task.status} onValueChange={(value) => onTaskUpdate({ ...task, status: value })}>
               {statuses.map((status) => (
-                <DropdownMenuRadioItem key={status.value} value={status.value}>
+                <DropdownMenuRadioItem
+                  key={status.value}
+                  value={status.value}
+                  className="cursor-pointer"
+                >
                   {status.label}
                 </DropdownMenuRadioItem>
               ))}
@@ -74,11 +63,15 @@ export function DataTableRowActions<TData>({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Priority</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger className="cursor-pointer">Priority</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={task.priority} onValueChange={(value) => handleChange("priority", value)}>
+            <DropdownMenuRadioGroup value={task.priority} onValueChange={(value) => onTaskUpdate({ ...task, priority: value })}>
               {priorities.map((priority) => (
-                <DropdownMenuRadioItem key={priority.value} value={priority.value}>
+                <DropdownMenuRadioItem
+                  key={priority.value}
+                  value={priority.value}
+                  className="cursor-pointer"
+                >
                   {priority.label}
                 </DropdownMenuRadioItem>
               ))}
@@ -86,11 +79,15 @@ export function DataTableRowActions<TData>({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Label</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger className="cursor-pointer">Label</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={task.label} onValueChange={(value) => handleChange("label", value)}>
+            <DropdownMenuRadioGroup value={task.label ?? ''} onValueChange={(value) => onTaskUpdate({ ...task, label: value })}>
               {labels.map((label) => (
-                <DropdownMenuRadioItem key={label.value} value={label.value}>
+                <DropdownMenuRadioItem
+                  key={label.value}
+                  value={label.value}
+                  className="cursor-pointer"
+                >
                   {label.label}
                 </DropdownMenuRadioItem>
               ))}
@@ -98,7 +95,10 @@ export function DataTableRowActions<TData>({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleDelete}>
+        <DropdownMenuItem
+          onSelect={() => onTaskDelete(task.id)}
+          className="cursor-pointer"
+        >
           Delete
           <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
         </DropdownMenuItem>

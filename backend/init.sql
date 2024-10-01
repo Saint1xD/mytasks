@@ -1,9 +1,9 @@
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     status TEXT NOT NULL,
     label TEXT,
-    priority TEXT NOT NULL
+    priority TEXT
 );
 
 INSERT INTO tasks (title, status, label, priority) VALUES

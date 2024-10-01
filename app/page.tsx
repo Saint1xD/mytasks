@@ -2,36 +2,66 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
-
 import { columns } from "@/components/columns"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/data-table/data-table"
 import { UserNav } from "@/components/user-nav"
-import { getTasks } from "@/data/taskManager"
-import { Task } from "@/data/schema"
+import { getTasks, updateTask, deleteTask, addTask } from "@/lib/taskManager"
+import { Task } from "@/types/schema"
 
 export default function TaskPage() {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchTasks = async () => {
-      const fetchedTasks = await getTasks()
-      setTasks(fetchedTasks)
+      try {
+        const fetchedTasks = await getTasks()
+        setTasks(fetchedTasks)
+        setError(null)
+      } catch (err) {
+        console.error("Failed to fetch tasks:", err)
+        setError(err instanceof Error ? err.message : 'An unknown error occurred')
+      }
     }
     fetchTasks()
   }, [])
 
-  const handleDataChange = async () => {
-    const fetchedTasks = await getTasks()
-    setTasks(fetchedTasks)
+  const handleTaskUpdate = async (updatedTask: Task) => {
+    try {
+      await updateTask(updatedTask)
+      setTasks(currentTasks =>
+        currentTasks.map(task =>
+          task.id === updatedTask.id ? updatedTask : task
+        )
+      )
+    } catch (error) {
+      console.error("Failed to update task:", error)
+    }
   }
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      const fetchedTasks = await getTasks()
-      setTasks(fetchedTasks)
+  const handleTaskDelete = async (taskId: string) => {
+    try {
+      await deleteTask(taskId)
+      setTasks(currentTasks => currentTasks.filter(task => task.id !== taskId))
+    } catch (error) {
+      console.error("Failed to delete task:", error)
     }
-    fetchTasks()
-  }, [])
+  }
+
+  const handleTaskAdd = async (newTask: Omit<Task, 'id'>) => {
+    try {
+      const addedTask = await addTask(
+        newTask.title,
+        newTask.description ?? "", // Use empty string as default if description is undefined
+        newTask.status,
+        newTask.priority,
+        newTask.label ?? ""
+      )
+      setTasks(currentTasks => [...currentTasks, addedTask])
+    } catch (error) {
+      console.error("Failed to add task:", error)
+    }
+  }
 
   return (
     <>
@@ -63,7 +93,19 @@ export default function TaskPage() {
             <UserNav />
           </div>
         </div>
-        <DataTable data={tasks} columns={columns} onDataChange={handleDataChange} />
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+        <DataTable
+          data={tasks}
+          columns={columns}
+          onTaskUpdate={handleTaskUpdate}
+          onTaskDelete={handleTaskDelete}
+          onTaskAdd={handleTaskAdd}
+        />
       </div>
     </>
   )
