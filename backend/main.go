@@ -62,7 +62,7 @@ func main() {
 	router.HandleFunc("/tasks/{id}", deleteTask).Methods("DELETE")
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000"},
+		AllowedOrigins: []string{"http://localhost", "http://localhost:80"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 	})
 
