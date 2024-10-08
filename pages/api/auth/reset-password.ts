@@ -1,61 +1,44 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import getPool from '@/lib/db';
+import { verifyToken } from '@/lib/auth';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-const transporter = nodemailer.createTransport({
-  // Configure your email service here
-  host: 'smtp.example.com',
-  port: 587,
-  auth: {
-    user: 'your-email@example.com',
-    pass: 'your-password'
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
-});
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method === 'POST') {
-    const { email } = req.body;
+  const user = await verifyToken(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-    try {
-      const client = await pool.connect();
-      const user = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+  const { currentPassword, newPassword } = req.body;
 
-      if (user.rows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'User not found' });
-      }
+  try {
+    const pool = await getPool();
+    const client = await pool.connect();
 
-      const resetToken = crypto.randomBytes(20).toString('hex');
-      const resetTokenExpiry = Date.now() + 3600000; // 1 hour from now
+    // Verify current password
+    const result = await client.query('SELECT password FROM users WHERE id = $1', [user.userId]);
+    const dbUser = result.rows[0];
 
-      await client.query('UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE email = $3',
-        [resetToken, resetTokenExpiry, email]);
-
+    if (!dbUser || !bcrypt.compareSync(currentPassword, dbUser.password)) {
       client.release();
-
-      // Send email
-      const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
-      await transporter.sendMail({
-        to: email,
-        subject: 'Password Reset',
-        html: `Click <a href="${resetUrl}">here</a> to reset your password.`
-      });
-
-      res.status(200).json({ message: 'Password reset email sent' });
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to process password reset' });
+      return res.status(400).json({ error: 'Current password is incorrect' });
     }
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, user.userId]);
+
+    client.release();
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: 'An error occurred while resetting the password' });
   }
 }
