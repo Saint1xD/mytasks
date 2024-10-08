@@ -12,12 +12,12 @@ export default async function handler(
   const { id } = req.query
 
   if (req.method === 'PUT') {
-    const { title, completed, dueDate, priority } = req.body
+    const { title, completed, startDate, dueDate, priority } = req.body
     try {
       const client = await pool.connect()
       const result = await client.query(
-        'UPDATE tasks SET title = $1, completed = $2, due_date = $3, priority = $4 WHERE id = $5 RETURNING *',
-        [title, completed, dueDate, priority, id]
+        'UPDATE tasks SET title = $1, completed = $2, start_date = $3, due_date = $4, priority = $5 WHERE id = $6 RETURNING *',
+        [title, completed, startDate, dueDate, priority, id]
       )
       client.release()
       if (result.rows.length > 0) {
