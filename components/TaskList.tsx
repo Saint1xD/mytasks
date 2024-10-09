@@ -8,7 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO, isAfter, isBefore, isToday } from 'date-fns';
+import { parseISO, parse } from 'date-fns';
+import { format, formatInTimeZone } from 'date-fns-tz';
 import { CalendarIcon, Pencil, Trash2, ArrowUp, ArrowRight, ArrowDown, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +24,12 @@ export default function TaskList() {
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Função para ajustar a data para meio-dia UTC
+  const adjustDateToNoonUTC = (date: Date) => {
+    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
+  };
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
@@ -57,13 +64,16 @@ export default function TaskList() {
   const addTask = async () => {
     if (!newTask.trim()) return;
     try {
+      const adjustedStartDate = startDate ? adjustDateToNoonUTC(startDate) : undefined;
+      const adjustedDueDate = dueDate ? adjustDateToNoonUTC(dueDate) : undefined;
+
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: newTask,
-          startDate: startDate?.toISOString(),
-          dueDate: dueDate?.toISOString(),
+          startDate: adjustedStartDate ? adjustedStartDate.toISOString() : undefined,
+          dueDate: adjustedDueDate ? adjustedDueDate.toISOString() : undefined,
           priority
         }),
       });
@@ -90,10 +100,17 @@ export default function TaskList() {
 
   const updateTask = async (task: Task) => {
     try {
+      const adjustedStartDate = task.startDate ? adjustDateToNoonUTC(new Date(task.startDate)) : undefined;
+      const adjustedDueDate = task.dueDate ? adjustDateToNoonUTC(new Date(task.dueDate)) : undefined;
+
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(task),
+        body: JSON.stringify({
+          ...task,
+          startDate: adjustedStartDate ? adjustedStartDate.toISOString() : undefined,
+          dueDate: adjustedDueDate ? adjustedDueDate.toISOString() : undefined,
+        }),
       });
       if (!response.ok) {
         throw new Error('Failed to update task');
@@ -133,9 +150,10 @@ export default function TaskList() {
     }
   };
 
-  const formatDate = (date: string | undefined) => {
-    if (!date) return 'Not set';
-    return format(parseISO(date), "dd/MM/yyyy");
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Not set';
+    const date = new Date(dateString);
+    return formatInTimeZone(date, 'UTC', 'dd/MM/yyyy');
   };
 
   const getPriorityIcon = (priority: string) => {
@@ -153,19 +171,19 @@ export default function TaskList() {
 
   const getStatusIcon = (dueDate: string | undefined) => {
     if (!dueDate) return null;
-    const dueDateObj = parseISO(dueDate);
+    const dueDateObj = new Date(dueDate);
     const today = new Date();
-    if (isBefore(dueDateObj, today)) {
+    if (dueDateObj < today) {
       return <AlertTriangle className="h-4 w-4 text-red-500" data-tooltip="Overdue" />;
     }
-    if (isToday(dueDateObj)) {
+    if (dueDateObj.toDateString() === today.toDateString()) {
       return <Clock className="h-4 w-4 text-yellow-500" data-tooltip="Due today" />;
     }
     return null;
   };
 
   const disablePastDates = (date: Date) => {
-    return isAfter(date, new Date());
+    return date < new Date(new Date().setHours(0, 0, 0, 0));
   };
 
   return (
@@ -284,14 +302,14 @@ export default function TaskList() {
                               <PopoverTrigger asChild>
                                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {editingTask.startDate ? format(new Date(editingTask.startDate), "dd/MM/yyyy") : <span>Choose start date</span>}
+                                  {editingTask.startDate ? formatDate(editingTask.startDate) : <span>Choose start date</span>}
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={editingTask.startDate ? new Date(editingTask.startDate) : undefined}
-                                  onSelect={(date) => setEditingTask({...editingTask, startDate: date?.toISOString()})}
+                                  onSelect={(date) => setEditingTask({...editingTask, startDate: date ? date.toISOString() : undefined})}
                                   disabled={disablePastDates}
                                   initialFocus
                                 />
@@ -301,14 +319,14 @@ export default function TaskList() {
                               <PopoverTrigger asChild>
                                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {editingTask.dueDate ? format(new Date(editingTask.dueDate), "dd/MM/yyyy") : <span>Choose due date</span>}
+                                  {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Choose due date</span>}
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={editingTask.dueDate ? new Date(editingTask.dueDate) : undefined}
-                                  onSelect={(date) => setEditingTask({...editingTask, dueDate: date?.toISOString()})}
+                                  onSelect={(date) => setEditingTask({...editingTask, dueDate: date ? date.toISOString() : undefined})}
                                   disabled={disablePastDates}
                                   initialFocus
                                 />
