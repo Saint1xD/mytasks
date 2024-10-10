@@ -17,12 +17,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Home() {
   const { user, logout } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('Current user state:', user);
+    if (user?.avatarUrl) {
+      setAvatarUrl(`/api/avatars/${user.avatarUrl.split('/').pop()}`);
+    }
   }, [user]);
 
   return (
@@ -34,8 +38,11 @@ export default function Home() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="cursor-pointer">
-                  <AvatarImage src={user.avatarUrl} alt={user.email} />
-                  <AvatarFallback>{user.email[0].toUpperCase()}</AvatarFallback>
+                  {avatarUrl ? (
+                    <Image src={avatarUrl} alt={user.email} width={40} height={40} />
+                  ) : (
+                    <AvatarFallback>{user.email[0].toUpperCase()}</AvatarFallback>
+                  )}
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

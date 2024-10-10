@@ -11,7 +11,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function ProfilePage() {
-  const { user, login } = useAuth();
+  const { user, login, updateAvatar } = useAuth();
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,7 +21,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setEmail(user.email);
-      setAvatarUrl(user.avatarUrl || '');
+      setAvatarUrl(user.avatarUrl ? `/api/avatars/${user.avatarUrl.split('/').pop()}` : '');
     }
   }, [user]);
 
@@ -72,8 +72,9 @@ export default function ProfilePage() {
         });
 
         if (response.ok) {
-          const { avatarUrl } = await response.json();
-          setAvatarUrl(avatarUrl);
+          const { avatarUrl: newAvatarUrl } = await response.json();
+          setAvatarUrl(`/api/avatars/${newAvatarUrl.split('/').pop()}`);
+          updateAvatar(newAvatarUrl);
           toast({
             title: "Avatar updated",
             description: "Your profile picture has been successfully updated.",
@@ -111,13 +112,7 @@ export default function ProfilePage() {
         <div className="flex items-center space-x-4">
           <Avatar className="w-24 h-24">
             {avatarUrl ? (
-              <Image
-                src={avatarUrl.startsWith('http') ? avatarUrl : `/api/avatars/${avatarUrl.split('/').pop()}`}
-                alt={user.email}
-                width={96}
-                height={96}
-                className="object-cover"
-              />
+              <Image src={avatarUrl} alt={user.email} width={96} height={96} />
             ) : (
               <AvatarFallback>{user.email[0].toUpperCase()}</AvatarFallback>
             )}

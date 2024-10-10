@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   login: (token: string, userData: User) => void;
   logout: () => void;
+  updateAvatar: (newAvatarUrl: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,8 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('User logged out');
   };
 
+  const updateAvatar = (newAvatarUrl: string) => {
+    setUser(prevUser => prevUser ? { ...prevUser, avatarUrl: newAvatarUrl } : null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   );
