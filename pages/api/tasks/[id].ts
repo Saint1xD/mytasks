@@ -1,9 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Pool } from 'pg'
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
+import getPool from '@/lib/db'
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,16 +8,23 @@ export default async function handler(
   const { id } = req.query
 
   if (req.method === 'PUT') {
-    const { title, completed, startDate, dueDate, priority } = req.body
+    const { title, completed, startDate, dueDate, priority, userId } = req.body
     try {
+      const pool = await getPool()
       const client = await pool.connect()
       const result = await client.query(
-        'UPDATE tasks SET title = $1, completed = $2, start_date = $3, due_date = $4, priority = $5 WHERE id = $6 RETURNING *',
-        [title, completed, startDate, dueDate, priority, id]
+        'UPDATE tasks SET title = $1, completed = $2, start_date = $3, due_date = $4, priority = $5, user_id = $6 WHERE id = $7 RETURNING *',
+        [title, completed, startDate, dueDate, priority, userId, id]
       )
       client.release()
       if (result.rows.length > 0) {
-        res.status(200).json(result.rows[0])
+        const updatedTask = {
+          ...result.rows[0],
+          startDate: result.rows[0].start_date,
+          dueDate: result.rows[0].due_date,
+          userId: result.rows[0].user_id
+        };
+        res.status(200).json(updatedTask);
       } else {
         res.status(404).json({ error: 'Task not found' })
       }
@@ -30,6 +33,7 @@ export default async function handler(
     }
   } else if (req.method === 'DELETE') {
     try {
+      const pool = await getPool()
       const client = await pool.connect()
       const result = await client.query('DELETE FROM tasks WHERE id = $1 RETURNING *', [id])
       client.release()

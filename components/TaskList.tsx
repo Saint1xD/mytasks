@@ -1,32 +1,34 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Task } from '@/lib/types';
+import { Task, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { parseISO, parse } from 'date-fns';
 import { format, formatInTimeZone } from 'date-fns-tz';
 import { CalendarIcon, Pencil, Trash2, ArrowUp, ArrowRight, ArrowDown, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [newTask, setNewTask] = useState('');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [assignedUserId, setAssignedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { user } = useAuth();
 
-  // Função para ajustar a data para meio-dia UTC
   const adjustDateToNoonUTC = (date: Date) => {
     return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
   };
@@ -57,9 +59,33 @@ export default function TaskList() {
     }
   }, [toast]);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setUsers(data);
+      } else {
+        console.error('API did not return an array:', data);
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch users. Please try again.",
+      });
+      setUsers([]);
+    }
+  }, [toast]);
+
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+    fetchUsers();
+  }, [fetchTasks, fetchUsers]);
 
   const addTask = async () => {
     if (!newTask.trim()) return;
@@ -74,7 +100,8 @@ export default function TaskList() {
           title: newTask,
           startDate: adjustedStartDate ? adjustedStartDate.toISOString() : undefined,
           dueDate: adjustedDueDate ? adjustedDueDate.toISOString() : undefined,
-          priority
+          priority,
+          userId: assignedUserId ? parseInt(assignedUserId) : null
         }),
       });
       if (!response.ok) {
@@ -84,6 +111,7 @@ export default function TaskList() {
       setStartDate(undefined);
       setDueDate(undefined);
       setPriority('medium');
+      setAssignedUserId(null);
       fetchTasks();
       toast({
         title: "Task added",
@@ -244,6 +272,24 @@ export default function TaskList() {
             <SelectItem value="high">High</SelectItem>
           </SelectContent>
         </Select>
+        <Select
+          value={assignedUserId || 'unassigned'}
+          onValueChange={(value) =>
+            setAssignedUserId(value === 'unassigned' ? null : value)
+          }
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Assign to" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {users.map((user) => (
+              <SelectItem key={user.id} value={user.id.toString()}>
+                {user.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button onClick={addTask}>Add Task</Button>
       </div>
       {isLoading ? (
@@ -258,12 +304,15 @@ export default function TaskList() {
                 <th className="p-2">Start Date</th>
                 <th className="p-2">Due Date</th>
                 <th className="p-2">Priority</th>
+                <th className="p-2">Assigned To</th>
                 <th className="p-2">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {tasks.map(task => (
-                <tr key={task.id} className="border-t">
+              {tasks.map(task => {
+                const assignedUser = users.find(u => u.id === task.userId);
+                return (
+                  <tr key={task.id} className="border-t">
                   <td className="p-2">
                     <Checkbox
                       checked={task.completed}
@@ -281,6 +330,24 @@ export default function TaskList() {
                     <span className="ml-2">{task.priority}</span>
                   </td>
                   <td className="p-2">
+                      {assignedUser ? (
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-6 w-6">
+                            {assignedUser.avatarUrl ? (
+                              <AvatarImage src={assignedUser.avatarUrl} alt={assignedUser.email} />
+                            ) : (
+                              <AvatarFallback>
+                                {assignedUser.email.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span>{assignedUser.email}</span>
+                        </div>
+                      ) : (
+                        <span>Unassigned</span>
+                      )}
+                    </td>
+                  <td className="p-2">
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="icon" onClick={() => setEditingTask(task)}>
@@ -288,9 +355,12 @@ export default function TaskList() {
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Edit Task</DialogTitle>
-                        </DialogHeader>
+                      <DialogHeader>
+                        <DialogTitle>Edit Task</DialogTitle>
+                        <DialogDescription>
+                          Update the details of your task.
+                        </DialogDescription>
+                    </DialogHeader>
                         {editingTask && (
                           <div className="space-y-4">
                             <Input
@@ -345,6 +415,27 @@ export default function TaskList() {
                                 <SelectItem value="high">High</SelectItem>
                               </SelectContent>
                             </Select>
+                            <Select
+                              value={editingTask.userId?.toString() || 'unassigned'}
+                              onValueChange={(value) =>
+                                setEditingTask({
+                                  ...editingTask,
+                                  userId: value === 'unassigned' ? null : parseInt(value),
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Assign to" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {users.map((user) => (
+                                  <SelectItem key={user.id} value={user.id.toString()}>
+                                    {user.email}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <Button onClick={() => updateTask(editingTask)}>Save Changes</Button>
                           </div>
                         )}
@@ -354,8 +445,9 @@ export default function TaskList() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

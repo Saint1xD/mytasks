@@ -18,7 +18,8 @@ export default async function handler(
         const tasks = result.rows.map(task => ({
           ...task,
           startDate: task.start_date,
-          dueDate: task.due_date
+          dueDate: task.due_date,
+          userId: task.user_id
         }));
         res.status(200).json(tasks);
       } catch (err) {
@@ -26,17 +27,18 @@ export default async function handler(
         res.status(500).json({ error: 'Failed to fetch tasks' });
       }
     } else if (req.method === 'POST') {
-      const { title, startDate, dueDate, priority } = req.body;
+      const { title, startDate, dueDate, priority, userId } = req.body;
       try {
         const result = await pool.query(
-          'INSERT INTO tasks (title, completed, start_date, due_date, priority) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-          [title, false, startDate, dueDate, priority]
+          'INSERT INTO tasks (title, completed, start_date, due_date, priority, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [title, false, startDate, dueDate, priority, userId]
         );
         console.log('Task added:', result.rows[0]);
         const newTask = {
           ...result.rows[0],
           startDate: result.rows[0].start_date,
-          dueDate: result.rows[0].due_date
+          dueDate: result.rows[0].due_date,
+          userId: result.rows[0].user_id
         };
         res.status(201).json(newTask);
       } catch (err) {
