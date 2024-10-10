@@ -15,7 +15,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const fileContent = fs.readFileSync(avatarPath);
     const contentType = getContentType(avatarPath);
     res.setHeader('Content-Type', contentType);
-    res.send(fileContent);
+    res.status(200).send(fileContent);
   } else {
     res.status(404).json({ error: 'File not found' });
   }
