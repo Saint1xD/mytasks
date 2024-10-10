@@ -16,12 +16,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (user && bcrypt.compareSync(password, user.password)) {
         const token = jwt.sign(
-          { userId: user.id, email: user.email, role: user.role },
+          { userId: user.id, email: user.email, role: user.role, avatarUrl: user.avatar_url },
           process.env.JWT_SECRET!,
-          { expiresIn: '1h' }
+          { expiresIn: '7d' }
         );
         console.log('Token generated successfully');
-        res.status(200).json({ token, user: { id: user.id, email: user.email, role: user.role } });
+        res.status(200).json({
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            avatarUrl: user.avatar_url
+          }
+        });
       } else {
         console.log('Invalid credentials');
         res.status(401).json({ error: 'Invalid credentials' });

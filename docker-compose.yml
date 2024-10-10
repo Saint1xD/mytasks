@@ -11,6 +11,8 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    volumes:
+      - ./public/avatars:/app/public/avatars
 
   db:
     image: postgres:13

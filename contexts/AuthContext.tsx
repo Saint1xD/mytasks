@@ -1,11 +1,13 @@
 "use client";
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 
 interface User {
   id: number;
   email: string;
   role: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -21,22 +23,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('userData');
-    if (token && userData) {
-      setUser(JSON.parse(userData));
+    if (token) {
+      try {
+        const decodedToken = jwtDecode<User>(token);
+        setUser(decodedToken);
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        localStorage.removeItem('token');
+      }
     }
   }, []);
 
   const login = (token: string, userData: User) => {
     localStorage.setItem('token', token);
-    localStorage.setItem('userData', JSON.stringify(userData));
     setUser(userData);
     console.log('User logged in:', userData);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('userData');
     setUser(null);
     console.log('User logged out');
   };

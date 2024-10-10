@@ -1,12 +1,22 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import Dashboard from '@/components/Dashboard';
 import TaskList from '@/components/TaskList';
 import { ModeToggle } from '@/components/mode-toggle';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { User, LogOut } from 'lucide-react';
 
 export default function Home() {
   const { user, logout } = useAuth();
@@ -21,11 +31,28 @@ export default function Home() {
         <h1 className="text-4xl font-bold">Task Master</h1>
         <div className="flex items-center space-x-4">
           {user ? (
-            <>
-              <span>Welcome, {user.email}</span>
-              <Button onClick={logout}>Logout</Button>
-              <Link href="/reset-password" className="text-blue-500 hover:underline">Reset Password</Link>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="cursor-pointer">
+                  <AvatarImage src={user.avatarUrl} alt={user.email} />
+                  <AvatarFallback>{user.email[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center w-full cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={logout} className="flex items-center text-red-600 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <>
               <Link href="/login" className="text-blue-500 hover:underline">Login</Link>
