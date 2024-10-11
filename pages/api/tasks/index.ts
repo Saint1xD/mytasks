@@ -27,11 +27,11 @@ export default async function handler(
         res.status(500).json({ error: 'Failed to fetch tasks' });
       }
     } else if (req.method === 'POST') {
-      const { title, startDate, dueDate, priority, userId } = req.body;
+      const { title, description, startDate, dueDate, priority, userId } = req.body;
       try {
         const result = await pool.query(
-          'INSERT INTO tasks (title, completed, start_date, due_date, priority, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-          [title, false, startDate, dueDate, priority, userId]
+          'INSERT INTO tasks (title, description, completed, start_date, due_date, priority, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+          [title, description, false, startDate, dueDate, priority, userId]
         );
         console.log('Task added:', result.rows[0]);
         const newTask = {
