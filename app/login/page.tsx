@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -85,6 +86,9 @@ export default function LoginPage() {
           Log In
         </Button>
       </form>
+      <div className="mt-4 text-center">
+        <p>Don&apos;t have an account? <Link href="/register" className="text-blue-500 hover:underline">Register here</Link></p>
+      </div>
     </div>
   );
 }

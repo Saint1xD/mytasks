@@ -1,3 +1,4 @@
+// TaskList.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -9,45 +10,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO } from 'date-fns';
-import {
-  CalendarIcon,
-  Pencil,
-  Trash2,
-  ArrowUp,
-  ArrowRight,
-  ArrowDown,
-  AlertTriangle,
-  Clock,
-  Plus,
-  User as UserIcon,
-  Calendar as CalendarIconSolid,
-} from 'lucide-react';
+import { format, formatInTimeZone } from 'date-fns-tz';
+import { parseISO } from 'date-fns';
+import { CalendarIcon, Pencil, Trash2, ArrowUp, ArrowRight, ArrowDown, AlertTriangle, Clock, Plus, User as UserIcon, Calendar as CalendarIconSolid, PlayCircle, FlagIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 export default function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -64,13 +35,8 @@ export default function TaskList() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const toDateString = (date: Date) => {
-    return format(date, 'yyyy-MM-dd');
-  };
-
-  const fromDateString = (dateString: string | undefined) => {
-    if (!dateString) return undefined;
-    return parseISO(dateString);
+  const toUTCDateString = (date: Date) => {
+    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
   };
 
   const fetchTasks = useCallback(async () => {
@@ -209,7 +175,7 @@ export default function TaskList() {
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'Not set';
     const date = parseISO(dateString);
-    return format(date, 'dd/MM/yyyy');
+    return formatInTimeZone(date, 'UTC', 'dd/MM/yyyy');
   };
 
   const getPriorityIcon = (priority: string) => {
@@ -251,96 +217,100 @@ export default function TaskList() {
     setAssignedUserId(null);
   };
 
+  const canManageTasks = user && (user.role === 'admin' || user.role === 'manager');
+
   return (
     <div className="space-y-4">
-      <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Task
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Task</DialogTitle>
-            <DialogDescription>Enter the details for the new task.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Task title" />
-            <Textarea
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="Task description"
-            />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn('w-full justify-start text-left font-normal', !startDate && 'text-muted-foreground')}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? formatDate(startDate) : <span>Start date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate ? fromDateString(startDate) : undefined}
-                  onSelect={(date) => setStartDate(date ? toDateString(date) : undefined)}
-                  disabled={disablePastDates}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn('w-full justify-start text-left font-normal', !dueDate && 'text-muted-foreground')}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dueDate ? formatDate(dueDate) : <span>Due date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dueDate ? fromDateString(dueDate) : undefined}
-                  onSelect={(date) => setDueDate(date ? toDateString(date) : undefined)}
-                  disabled={disablePastDates}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <Select value={priority} onValueChange={(value: 'low' | 'medium' | 'high') => setPriority(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={assignedUserId || 'unassigned'}
-              onValueChange={(value) => setAssignedUserId(value === 'unassigned' ? null : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Assign to" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    {user.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={addTask}>Add Task</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {canManageTasks && (
+        <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Add Task
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Task</DialogTitle>
+              <DialogDescription>Enter the details for the new task.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Task title" />
+              <Textarea
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                placeholder="Task description"
+              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn('w-full justify-start text-left font-normal', !startDate && 'text-muted-foreground')}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? formatDate(startDate) : <span>Start date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate ? parseISO(startDate) : undefined}
+                    onSelect={(date) => setStartDate(date ? toUTCDateString(date) : undefined)}
+                    disabled={disablePastDates}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn('w-full justify-start text-left font-normal', !dueDate && 'text-muted-foreground')}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? formatDate(dueDate) : <span>Due date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate ? parseISO(dueDate) : undefined}
+                    onSelect={(date) => setDueDate(date ? toUTCDateString(date) : undefined)}
+                    disabled={disablePastDates}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Select value={priority} onValueChange={(value: 'low' | 'medium' | 'high') => setPriority(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={assignedUserId || 'unassigned'}
+                onValueChange={(value) => setAssignedUserId(value === 'unassigned' ? null : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Assign to" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={addTask}>Add Task</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {isLoading ? (
         <p>Loading tasks...</p>
@@ -355,7 +325,7 @@ export default function TaskList() {
                 <th className="p-2">Due Date</th>
                 <th className="p-2">Priority</th>
                 <th className="p-2">Assigned To</th>
-                <th className="p-2">Actions</th>
+                {canManageTasks && <th className="p-2">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -435,145 +405,131 @@ export default function TaskList() {
                         <span>Unassigned</span>
                       )}
                     </td>
-                    <td className="p-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingTask(task)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Edit Task</DialogTitle>
-                            <DialogDescription>
-                              Update the details of your task.
-                            </DialogDescription>
-                          </DialogHeader>
-                          {editingTask && (
-                            <div className="space-y-4">
-                              <Input
-                                value={editingTask.title}
-                                onChange={(e) =>
-                                  setEditingTask({ ...editingTask, title: e.target.value })
-                                }
-                                placeholder="Task title"
-                              />
-                              <Textarea
-                                value={editingTask.description}
-                                onChange={(e) =>
-                                  setEditingTask({ ...editingTask, description: e.target.value })
-                                }
-                                placeholder="Task description"
-                              />
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {editingTask.startDate ? formatDate(editingTask.startDate) : <span>Choose start date</span>}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={editingTask.startDate ? fromDateString(editingTask.startDate) : undefined}
-                                    onSelect={(date) =>
-                                      setEditingTask({
-                                        ...editingTask,
-                                        startDate: date ? toDateString(date) : undefined,
-                                      })
-                                    }
-                                    disabled={disablePastDates}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Choose due date</span>}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={editingTask.dueDate ? fromDateString(editingTask.dueDate) : undefined}
-                                    onSelect={(date) =>
-                                      setEditingTask({
-                                        ...editingTask,
-                                        dueDate: date ? toDateString(date) : undefined,
-                                      })
-                                    }
-                                    disabled={disablePastDates}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <Select
-                                value={editingTask.priority}
-                                onValueChange={(value: 'low' | 'medium' | 'high') =>
-                                  setEditingTask({ ...editingTask, priority: value })
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="low">Low</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="high">High</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Select
-                                value={editingTask.userId?.toString() || 'unassigned'}
-                                onValueChange={(value) =>
-                                  setEditingTask({
-                                    ...editingTask,
-                                    userId: value === 'unassigned' ? null : parseInt(value),
-                                  })
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Assign to" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                                  {users.map((user) => (
-                                    <SelectItem key={user.id} value={user.id.toString()}>
-                                      {user.email}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Button onClick={() => updateTask(editingTask)}>Save Changes</Button>
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure you want to delete this task?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the task.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteTask(task.id)}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </td>
+                    {canManageTasks && (
+                      <td className="p-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingTask(task)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Edit Task</DialogTitle>
+                              <DialogDescription>
+                                Update the details of your task.
+                              </DialogDescription>
+                            </DialogHeader>
+                            {editingTask && (
+                              <div className="space-y-4">
+                                <Input
+                                  value={editingTask.title}
+                                  onChange={(e) =>
+                                    setEditingTask({ ...editingTask, title: e.target.value })
+                                  }
+                                  placeholder="Task title"
+                                />
+                                <Textarea
+                                  value={editingTask.description}
+                                  onChange={(e) =>
+                                    setEditingTask({ ...editingTask, description: e.target.value })
+                                  }
+                                  placeholder="Task description"
+                                />
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                      <PlayCircle className="mr-2 h-4 w-4 text-green-500" />
+                                      {editingTask.startDate ? formatDate(editingTask.startDate) : <span>Choose start date</span>}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={editingTask.startDate ? parseISO(editingTask.startDate) : undefined}
+                                      onSelect={(date) =>
+                                        setEditingTask({
+                                          ...editingTask,
+                                          startDate: date ? toUTCDateString(date) : undefined,
+                                        })
+                                      }
+                                      disabled={disablePastDates}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                      <FlagIcon className="mr-2 h-4 w-4 text-red-500" />
+                                      {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Choose due date</span>}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={editingTask.dueDate ? parseISO(editingTask.dueDate) : undefined}
+                                      onSelect={(date) =>
+                                        setEditingTask({
+                                          ...editingTask,
+                                          dueDate: date ? toUTCDateString(date) : undefined,
+                                        })
+                                      }
+                                      disabled={disablePastDates}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                <Select
+                                  value={editingTask.priority}
+                                  onValueChange={(value: 'low' | 'medium' | 'high') =>
+                                    setEditingTask({ ...editingTask, priority: value })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="low">Low</SelectItem>
+                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="high">High</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={editingTask.userId?.toString() || 'unassigned'}
+                                  onValueChange={(value) =>
+                                    setEditingTask({
+                                      ...editingTask,
+                                      userId: value === 'unassigned' ? null : parseInt(value),
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Assign to" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {users.map((user) => (
+                                      <SelectItem key={user.id} value={user.id.toString()}>
+                                        {user.email}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button onClick={() => updateTask(editingTask)}>Save Changes</Button>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
