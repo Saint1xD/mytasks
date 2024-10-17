@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/contexts/AuthContext'
+import { TaskProvider } from '@/contexts/TaskContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,8 +23,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
-            <Toaster />
-            {children}
+            <TaskProvider>
+              <Toaster />
+              {children}
+            </TaskProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

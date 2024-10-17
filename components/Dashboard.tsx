@@ -1,40 +1,50 @@
 "use client";
 
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useEffect, useState } from "react";
-import { Task } from "@/lib/types";
+import { format, isToday, isPast, differenceInDays } from "date-fns";
+import { AlertTriangle, Clock, CalendarDays } from "lucide-react";
+import { useTaskContext } from '@/contexts/TaskContext';
 
 export default function Dashboard() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { tasks, refreshTasks } = useTaskContext();
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch('/api/tasks');
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setTasks(data);
-        } else {
-          console.error('API did not return an array:', data);
-          setTasks([]);
-        }
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-        setTasks([]);
-      }
-    };
-    fetchTasks();
-  }, []);
+    refreshTasks();
+  }, [refreshTasks]);
 
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
   const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   const upcomingDeadlines = tasks
-    .filter(task => !task.completed && task.dueDate && new Date(task.dueDate) > new Date())
-    .sort((a, b) => new Date(a.dueDate ?? 0).getTime() - new Date(b.dueDate ?? 0).getTime())
-    .slice(0, 3);
+    .filter(task => !task.completed && task.dueDate)
+    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+    .slice(0, 5);
+
+  const getDeadlineIcon = (dueDate: string) => {
+    const date = new Date(dueDate);
+    if (isPast(date)) {
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    } else if (isToday(date)) {
+      return <Clock className="h-4 w-4 text-yellow-500" />;
+    } else {
+      return <CalendarDays className="h-4 w-4 text-green-500" />;
+    }
+  };
+
+  const getDeadlineText = (dueDate: string) => {
+    const date = new Date(dueDate);
+    if (isPast(date)) {
+      return "Overdue";
+    } else if (isToday(date)) {
+      return "Due today";
+    } else {
+      const daysLeft = differenceInDays(date, new Date());
+      return `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`;
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -57,13 +67,24 @@ export default function Dashboard() {
           <ul className="space-y-2">
             {upcomingDeadlines.map(task => (
               <li key={task.id} className="flex justify-between items-center">
-                <span>{task.title}</span>
-                <span className="text-sm text-muted-foreground">
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-                </span>
+                <div className="flex items-center space-x-2">
+                  {getDeadlineIcon(task.dueDate!)}
+                  <span className="truncate">{task.title}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">
+                    {format(new Date(task.dueDate!), 'MMM d, yyyy')}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700">
+                    {getDeadlineText(task.dueDate!)}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>
+          {upcomingDeadlines.length === 0 && (
+            <p className="text-sm text-muted-foreground">No upcoming deadlines</p>
+          )}
         </CardContent>
       </Card>
     </div>

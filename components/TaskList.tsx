@@ -19,10 +19,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { Badge } from '@/components/ui/badge';
+import { useTaskContext } from '@/contexts/TaskContext';
+import TaskDetails from '@/components/TaskDetails';
 
 export default function TaskList() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { tasks, refreshTasks } = useTaskContext();
   const [users, setUsers] = useState<User[]>([]);
   const [newTask, setNewTask] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -61,33 +62,17 @@ export default function TaskList() {
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/tasks', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch tasks');
-      }
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setTasks(data);
-      } else {
-        console.error('API did not return an array:', data);
-        setTasks([]);
-      }
+      await refreshTasks();
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch tasks. Please try again.',
       });
-      setTasks([]);
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [refreshTasks, toast]);
 
   const fetchTaskActivities = useCallback(async (taskId: number) => {
     try {
@@ -169,7 +154,7 @@ export default function TaskList() {
         throw new Error('Failed to add task');
       }
       resetNewTaskForm();
-      fetchTasks();
+      await refreshTasks();
       setIsAddTaskDialogOpen(false);
       toast({
         title: 'Task added',
@@ -198,7 +183,7 @@ export default function TaskList() {
       if (!response.ok) {
         throw new Error('Failed to update task');
       }
-      fetchTasks();
+      await refreshTasks();
       setEditingTask(null);
       toast({
         title: 'Task updated',
@@ -225,7 +210,7 @@ export default function TaskList() {
       if (!response.ok) {
         throw new Error('Failed to delete task');
       }
-      fetchTasks();
+      await refreshTasks();
       toast({
         title: 'Task deleted',
         description: 'Your task has been deleted successfully.',
@@ -285,6 +270,192 @@ export default function TaskList() {
   };
 
   const canManageTasks = user && (user.role === 'admin' || user.role === 'manager');
+
+  const renderTaskTable = (tasks: Task[], isCompleted: boolean) => (
+    <table className="w-full">
+      <thead>
+        <tr className="text-left bg-gray-100 dark:bg-gray-800">
+          <th className="p-2">Status</th>
+          <th className="p-2">Title</th>
+          <th className="p-2">Start Date</th>
+          <th className="p-2">Due Date</th>
+          <th className="p-2">Priority</th>
+          <th className="p-2">Assigned To</th>
+          {canManageTasks && <th className="p-2">Actions</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {tasks.map((task) => {
+          const assignedUser = users.find((u) => u.id === task.userId);
+          return (
+            <tr key={task.id} className="border-t">
+              <td className="p-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={task.completed}
+                    onCheckedChange={(checked) => updateTask({ ...task, completed: checked as boolean })}
+                  />
+                  {getStatusIcon(task.dueDate)}
+                </div>
+              </td>
+              <td className="p-2">
+                <Button variant="link" className={cn(task.completed && 'line-through')} onClick={() => handleTaskClick(task)}>
+                  {task.title}
+                </Button>
+              </td>
+              <td className="p-2">{formatDate(task.startDate)}</td>
+              <td className="p-2">{formatDate(task.dueDate)}</td>
+              <td className="p-2 flex items-center">
+                {getPriorityIcon(task.priority)}
+                <span className="ml-2">{task.priority}</span>
+              </td>
+              <td className="p-2">
+                {assignedUser ? (
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="h-6 w-6">
+                      {assignedUser.avatarUrl ? (
+                        <AvatarImage src={assignedUser.avatarUrl} alt={assignedUser.email} />
+                      ) : (
+                        <AvatarFallback>{assignedUser.email.charAt(0).toUpperCase()}</AvatarFallback>
+                      )}
+                    </Avatar>
+                    <span>{assignedUser.email}</span>
+                  </div>
+                ) : (
+                  <span>Unassigned</span>
+                )}
+              </td>
+              {canManageTasks && (
+                <td className="p-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditingTask(task)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Task</DialogTitle>
+                        <DialogDescription>
+                          Update the details of your task.
+                        </DialogDescription>
+                      </DialogHeader>
+                      {editingTask && (
+                        <div className="space-y-4">
+                          <Input
+                            value={editingTask.title}
+                            onChange={(e) =>
+                              setEditingTask({ ...editingTask, title: e.target.value })
+                            }
+                            placeholder="Task title"
+                          />
+                          <Textarea
+                            value={editingTask.description}
+                            onChange={(e) =>
+                              setEditingTask({ ...editingTask, description: e.target.value })
+                            }
+                            placeholder="Task description"
+                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                <PlayCircle className="mr-2 h-4 w-4 text-green-500" />
+                                {editingTask.startDate ? formatDate(editingTask.startDate) : <span>Choose start date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={editingTask.startDate ? parseISO(editingTask.startDate) : undefined}
+                                onSelect={(date) =>
+                                  setEditingTask({
+                                    ...editingTask,
+                                    startDate: date ? toUTCDateString(date) : undefined,
+                                  })
+                                }
+                                disabled={disablePastDates}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                <FlagIcon className="mr-2 h-4 w-4 text-red-500" />
+                                {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Choose due date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={editingTask.dueDate ? parseISO(editingTask.dueDate) : undefined}
+                                onSelect={(date) =>
+                                  setEditingTask({
+                                    ...editingTask,
+                                    dueDate: date ? toUTCDateString(date) : undefined,
+                                  })
+                                }
+                                disabled={disablePastDates}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Select
+                            value={editingTask.priority}
+                            onValueChange={(value: 'low' | 'medium' | 'high') =>
+                              setEditingTask({ ...editingTask, priority: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={editingTask.userId?.toString() || 'unassigned'}
+                            onValueChange={(value) =>
+                              setEditingTask({
+                                ...editingTask,
+                                userId: value === 'unassigned' ? null : parseInt(value),
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Assign to" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {users.map((user) => (
+                                <SelectItem key={user.id} value={user.id.toString()}>
+                                  {user.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button onClick={() => updateTask(editingTask)}>Save Changes</Button>
+                        </div>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                  <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </td>
+              )}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
 
   return (
     <div className="space-y-4">
@@ -382,190 +553,15 @@ export default function TaskList() {
       {isLoading ? (
         <p>Loading tasks...</p>
       ) : tasks.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left bg-gray-100 dark:bg-gray-800">
-                <th className="p-2">Status</th>
-                <th className="p-2">Title</th>
-                <th className="p-2">Start Date</th>
-                <th className="p-2">Due Date</th>
-                <th className="p-2">Priority</th>
-                <th className="p-2">Assigned To</th>
-                {canManageTasks && <th className="p-2">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((task) => {
-                const assignedUser = users.find((u) => u.id === task.userId);
-                return (
-                  <tr key={task.id} className="border-t">
-                    <td className="p-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={task.completed}
-                          onCheckedChange={(checked) => updateTask({ ...task, completed: checked as boolean })}
-                        />
-                        {getStatusIcon(task.dueDate)}
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <Button variant="link" className={cn(task.completed && 'line-through')} onClick={() => handleTaskClick(task)}>
-                        {task.title}
-                      </Button>
-                    </td>
-                    <td className="p-2">{formatDate(task.startDate)}</td>
-                    <td className="p-2">{formatDate(task.dueDate)}</td>
-                    <td className="p-2 flex items-center">
-                      {getPriorityIcon(task.priority)}
-                      <span className="ml-2">{task.priority}</span>
-                    </td>
-                    <td className="p-2">
-                      {assignedUser ? (
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-6 w-6">
-                            {assignedUser.avatarUrl ? (
-                              <AvatarImage src={assignedUser.avatarUrl} alt={assignedUser.email} />
-                            ) : (
-                              <AvatarFallback>{assignedUser.email.charAt(0).toUpperCase()}</AvatarFallback>
-                            )}
-                          </Avatar>
-                          <span>{assignedUser.email}</span>
-                        </div>
-                      ) : (
-                        <span>Unassigned</span>
-                      )}
-                    </td>
-                    {canManageTasks && (
-                      <td className="p-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setEditingTask(task)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Edit Task</DialogTitle>
-                              <DialogDescription>
-                                Update the details of your task.
-                              </DialogDescription>
-                            </DialogHeader>
-                            {editingTask && (
-                              <div className="space-y-4">
-                                <Input
-                                  value={editingTask.title}
-                                  onChange={(e) =>
-                                    setEditingTask({ ...editingTask, title: e.target.value })
-                                  }
-                                  placeholder="Task title"
-                                />
-                                <Textarea
-                                  value={editingTask.description}
-                                  onChange={(e) =>
-                                    setEditingTask({ ...editingTask, description: e.target.value })
-                                  }
-                                  placeholder="Task description"
-                                />
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                      <PlayCircle className="mr-2 h-4 w-4 text-green-500" />
-                                      {editingTask.startDate ? formatDate(editingTask.startDate) : <span>Choose start date</span>}
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                      mode="single"
-                                      selected={editingTask.startDate ? parseISO(editingTask.startDate) : undefined}
-                                      onSelect={(date) =>
-                                        setEditingTask({
-                                          ...editingTask,
-                                          startDate: date ? toUTCDateString(date) : undefined,
-                                        })
-                                      }
-                                      disabled={disablePastDates}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                      <FlagIcon className="mr-2 h-4 w-4 text-red-500" />
-                                      {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Choose due date</span>}
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                      mode="single"
-                                      selected={editingTask.dueDate ? parseISO(editingTask.dueDate) : undefined}
-                                      onSelect={(date) =>
-                                        setEditingTask({
-                                          ...editingTask,
-                                          dueDate: date ? toUTCDateString(date) : undefined,
-                                        })
-                                      }
-                                      disabled={disablePastDates}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                                <Select
-                                  value={editingTask.priority}
-                                  onValueChange={(value: 'low' | 'medium' | 'high') =>
-                                    setEditingTask({ ...editingTask, priority: value })
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select priority" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="low">Low</SelectItem>
-                                    <SelectItem value="medium">Medium</SelectItem>
-                                    <SelectItem value="high">High</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Select
-                                  value={editingTask.userId?.toString() || 'unassigned'}
-                                  onValueChange={(value) =>
-                                    setEditingTask({
-                                      ...editingTask,
-                                      userId: value === 'unassigned' ? null : parseInt(value),
-                                    })
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Assign to" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {users.map((user) => (
-                                      <SelectItem key={user.id} value={user.id.toString()}>
-                                        {user.email}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Button onClick={() => updateTask(editingTask)}>Save Changes</Button>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-                        <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="space-y-8">
+          <div className="overflow-x-auto">
+            <h2 className="text-xl font-bold mb-4">In Progress Tasks</h2>
+            {renderTaskTable(tasks.filter(task => !task.completed), false)}
+          </div>
+          <div className="overflow-x-auto">
+            <h2 className="text-xl font-bold mb-4">Completed Tasks</h2>
+            {renderTaskTable(tasks.filter(task => task.completed), true)}
+          </div>
         </div>
       ) : (
         <p>No tasks available.</p>
@@ -576,109 +572,11 @@ export default function TaskList() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">{selectedTask?.title}</DialogTitle>
           </DialogHeader>
-          <div className="mt-4 space-y-6">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="col-span-1">
-                  <div className="flex flex-col space-y-2">
-                    <div>
-                      <p className="text-sm text-gray-500">Status</p>
-                      <Badge
-                        variant={selectedTask?.completed ? 'default' : 'secondary'}
-                        className={cn(
-                          "mt-1",
-                          selectedTask?.completed && "bg-green-500 hover:bg-green-600"
-                        )}
-                      >
-                        {selectedTask?.completed ? 'Completed' : 'In Progress'}
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Description</p>
-                      <p className="mt-1">{selectedTask?.description || 'No description'}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Priority</p>
-                    <div className="flex items-center mt-1">
-                      {getPriorityIcon(selectedTask?.priority || 'medium')}
-                      <span className="ml-2 capitalize">{selectedTask?.priority}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Assigned To</p>
-                    <p className="mt-1">{getUserEmailById(selectedTask?.userId ?? null)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Start Date (Initial Date)</p>
-                    <div className="flex items-center mt-1">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      <p>{formatDateWithOffset(selectedTask?.startDate)}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Due Date (Deadline)</p>
-                    <div className="flex items-center mt-1">
-                      <FlagIcon className="mr-2 h-4 w-4" />
-                      <p>{formatDateWithOffset(selectedTask?.dueDate)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Activity Log</h3>
-              {taskActivities.length > 0 ? (
-                <ul className="space-y-4">
-                  {taskActivities.map((activity) => (
-                    <li key={activity.id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <ActivityIcon className="w-4 h-4 text-blue-500" />
-                        <p className="font-medium">{activity.userEmail} {activity.action}d the task</p>
-                      </div>
-                      <p className="text-sm text-gray-500 mb-2">{formatActivityDate(activity.createdAt)}</p>
-                      <ul className="text-sm space-y-1">
-                        {Object.entries(activity.details)
-                          .sort(([a], [b]) => a === 'start_date' ? -1 : b === 'start_date' ? 1 : 0)
-                          .map(([key, value]: [string, any]) => {
-                          if (key === 'start_date' || key === 'due_date') {
-                            if (value.from === value.to) return null;
-                            const label = key === 'start_date' ? 'Start Date' : 'Due Date';
-                            const icon = key === 'start_date' ? <CalendarIcon className="inline-block mr-1 h-4 w-4" /> : <FlagIcon className="inline-block mr-1 h-4 w-4" />;
-                            return (
-                              <li key={key}>
-                                {icon}
-                                {label}: {' '}
-                                {value.from ? formatDateWithOffset(value.from) : 'Not set'} → {' '}
-                                {value.to ? formatDateWithOffset(value.to) : 'Not set'}
-                              </li>
-                            );
-                          }
-                          if (key === 'user_id') {
-                            return (
-                              <li key={key}>
-                                <UserIcon className="inline-block mr-1 h-4 w-4" />
-                                Assigned To: {getUserEmailById(value.from)} → {getUserEmailById(value.to)}
-                              </li>
-                            );
-                          }
-                          return (
-                            <li key={key} className="capitalize">
-                              {key}: {value.from || 'Not set'} → {value.to || 'Not set'}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500">No activity log available for this task.</p>
-              )}
-            </div>
-          </div>
+          <TaskDetails
+            selectedTask={selectedTask}
+            taskActivities={taskActivities}
+            users={users}
+          />
         </DialogContent>
       </Dialog>
     </div>
