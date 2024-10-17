@@ -9,6 +9,16 @@ export interface Task {
   userId: number | null;
 }
 
+export interface TaskActivity {
+  id: number;
+  taskId: number;
+  userId: number;
+  userEmail: string;
+  action: string;
+  details: any;
+  createdAt: string;
+}
+
 export interface User {
   id: number;
   email: string;
