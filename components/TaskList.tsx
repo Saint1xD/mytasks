@@ -11,14 +11,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, formatInTimeZone } from 'date-fns-tz';
+import { addDays } from 'date-fns';
 import { parseISO } from 'date-fns';
-import { CalendarIcon, Pencil, Trash2, ArrowUp, ArrowRight, ArrowDown, AlertTriangle, Clock, Plus, User as UserIcon, Calendar as CalendarIconSolid, PlayCircle, FlagIcon } from 'lucide-react';
+import { CalendarIcon, Pencil, Trash2, ArrowUp, ArrowRight, ArrowDown, AlertTriangle, Clock, Plus, User as UserIcon, Calendar as CalendarIconSolid, PlayCircle, FlagIcon, ActivityIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
+
+interface TaskActivity {
+  id: number;
+  taskId: number;
+  userId: number;
+  userEmail: string;
+  action: string;
+  details: any;
+  createdAt: string;
+}
 
 export default function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -34,15 +45,38 @@ export default function TaskList() {
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskActivities, setTaskActivities] = useState<TaskActivity[]>([]);
 
   const toUTCDateString = (date: Date) => {
     return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
   };
 
+  const getUserEmailById = (userId: number | null) => {
+    const user = users.find(u => u.id === userId);
+    return user ? user.email : 'Unassigned';
+  };
+
+  const formatDateWithOffset = (dateString: string | undefined) => {
+    if (!dateString) return 'Not set';
+    const date = addDays(parseISO(dateString), 1); // Add one day to correct the offset
+    return format(date, 'PPP');
+  };
+
+  const formatActivityDate = (dateString: string) => {
+    const date = parseISO(dateString);
+    return format(date, 'PPP p');
+  };
+
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/tasks');
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/tasks', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
@@ -65,9 +99,38 @@ export default function TaskList() {
     }
   }, [toast]);
 
+  const fetchTaskActivities = useCallback(async (taskId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/${taskId}/activities`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const activities = await response.json();
+        setTaskActivities(activities);
+      } else {
+        console.error('Failed to fetch task activities');
+      }
+    } catch (error) {
+      console.error('Error fetching task activities:', error);
+    }
+  }, []);
+
+  const handleTaskClick = useCallback((task: Task) => {
+    setSelectedTask(task);
+    fetchTaskActivities(task.id);
+  }, [fetchTaskActivities]);
+
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch('/api/user');
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
@@ -96,9 +159,13 @@ export default function TaskList() {
   const addTask = async () => {
     if (!newTask.trim()) return;
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           title: newTask,
           description: newDescription,
@@ -129,9 +196,13 @@ export default function TaskList() {
 
   const updateTask = async (task: Task) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(task),
       });
       if (!response.ok) {
@@ -154,7 +225,13 @@ export default function TaskList() {
 
   const deleteTask = async (id: number) => {
     try {
-      const response = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to delete task');
       }
@@ -343,45 +420,9 @@ export default function TaskList() {
                       </div>
                     </td>
                     <td className="p-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="link" className={cn(task.completed && 'line-through')}>
-                            {task.title}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                          <DialogHeader>
-                            <DialogTitle className="text-2xl font-bold">{task.title}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              {/* <h4 className="text-sm font-medium">Description</h4> */}
-                              <p className="text-sm text-muted-foreground">{task.description || 'No description'}</p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <UserIcon className="h-4 w-4" />
-                              <span className="text-sm">
-                                {assignedUser ? assignedUser.email : 'Unassigned'}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <CalendarIconSolid className="h-4 w-4" />
-                              <span className="text-sm">Start: {formatDate(task.startDate)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <CalendarIconSolid className="h-4 w-4" />
-                              <span className="text-sm">Due: {formatDate(task.dueDate)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {getPriorityIcon(task.priority)}
-                              <span className="text-sm capitalize">{task.priority} Priority</span>
-                            </div>
-                            <Badge variant={task.completed ? 'secondary' : 'default'}>
-                              {task.completed ? 'Completed' : 'Pending'}
-                            </Badge>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button variant="link" className={cn(task.completed && 'line-through')} onClick={() => handleTaskClick(task)}>
+                        {task.title}
+                      </Button>
                     </td>
                     <td className="p-2">{formatDate(task.startDate)}</td>
                     <td className="p-2">{formatDate(task.dueDate)}</td>
@@ -539,6 +580,90 @@ export default function TaskList() {
       ) : (
         <p>No tasks available.</p>
       )}
+
+<Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">{selectedTask?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Task Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Description</p>
+                  <p>{selectedTask?.description || 'No description'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <Badge variant={selectedTask?.completed ? 'secondary' : 'default'}>
+                    {selectedTask?.completed ? 'Completed' : 'In Progress'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Priority</p>
+                  <div className="flex items-center">
+                    {getPriorityIcon(selectedTask?.priority || 'medium')}
+                    <span className="ml-2 capitalize">{selectedTask?.priority}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Start Date (Initial Date)</p>
+                  <p>{formatDateWithOffset(selectedTask?.startDate)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Due Date (Deadline)</p>
+                  <p>{formatDateWithOffset(selectedTask?.dueDate)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Assigned To</p>
+                  <p>{getUserEmailById(selectedTask?.userId ?? null)}</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Activity Log</h3>
+              <ul className="space-y-4">
+                {taskActivities.map((activity) => (
+                  <li key={activity.id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <ActivityIcon className="w-4 h-4 text-blue-500" />
+                      <p className="font-medium">{activity.userEmail} {activity.action}d the task</p>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-2">{formatActivityDate(activity.createdAt)}</p>
+                    <ul className="text-sm space-y-1">
+                      {Object.entries(activity.details).map(([key, value]: [string, any]) => {
+                        if (key === 'start_date' || key === 'due_date') {
+                          if (value.from === value.to) return null;
+                          return (
+                            <li key={key}>
+                              {key === 'start_date' ? 'Start Date' : 'Due Date'}: {' '}
+                              {value.from ? formatDateWithOffset(value.from) : 'Not set'} → {' '}
+                              {value.to ? formatDateWithOffset(value.to) : 'Not set'}
+                            </li>
+                          );
+                        }
+                        if (key === 'user_id') {
+                          return (
+                            <li key={key}>
+                              Assigned To: {getUserEmailById(value.from)} → {getUserEmailById(value.to)}
+                            </li>
+                          );
+                        }
+                        return (
+                          <li key={key} className="capitalize">
+                            {key}: {value.from || 'Not set'} → {value.to || 'Not set'}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
