@@ -69,11 +69,11 @@ export default function Home() {
           <ModeToggle />
         </div>
       </header>
-      <main className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
+      <main className="flex flex-col lg:flex-row gap-8">
+        <div className="lg:w-3/4">
           <TaskList />
         </div>
-        <div>
+        <div className="lg:w-1/4 lg:pt-[108px]">
           <Dashboard />
         </div>
       </main>

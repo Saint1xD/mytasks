@@ -48,34 +48,34 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Task Progress</CardTitle>
+      <Card className="p-4">
+        <CardHeader className="p-0 pb-2">
+          <CardTitle className="text-lg">Task Progress</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Progress value={completionRate} className="w-full" />
           <p className="mt-2 text-sm text-muted-foreground">
             {completedTasks} of {totalTasks} tasks completed
           </p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Deadlines</CardTitle>
+      <Card className="p-4">
+        <CardHeader className="p-0 pb-2">
+          <CardTitle className="text-lg">Upcoming Deadlines</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <ul className="space-y-2">
             {upcomingDeadlines.map(task => (
-              <li key={task.id} className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
+              <li key={task.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2 overflow-hidden">
                   {getDeadlineIcon(task.dueDate!)}
-                  <span className="truncate">{task.title}</span>
+                  <span className="truncate max-w-[150px]" title={task.title}>{task.title}</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-muted-foreground">
-                    {format(new Date(task.dueDate!), 'MMM d, yyyy')}
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(task.dueDate!), 'MMM d')}
                   </span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700">
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700">
                     {getDeadlineText(task.dueDate!)}
                   </span>
                 </div>

@@ -34,6 +34,7 @@ export default function TaskList() {
   const [assignedUserId, setAssignedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -50,7 +51,7 @@ export default function TaskList() {
 
   const formatDateWithOffset = (dateString: string | undefined) => {
     if (!dateString) return 'Not set';
-    const date = addDays(parseISO(dateString), 1); // Add one day to correct the offset
+    const date = addDays(parseISO(dateString), 1);
     return format(date, 'PPP');
   };
 
@@ -185,6 +186,7 @@ export default function TaskList() {
       }
       await refreshTasks();
       setEditingTask(null);
+      setIsEditTaskDialogOpen(false);
       toast({
         title: 'Task updated',
         description: 'Your task has been updated successfully.',
@@ -275,13 +277,13 @@ export default function TaskList() {
     <table className="w-full">
       <thead>
         <tr className="text-left bg-gray-100 dark:bg-gray-800">
-          <th className="p-2">Status</th>
-          <th className="p-2">Title</th>
-          <th className="p-2">Start Date</th>
-          <th className="p-2">Due Date</th>
-          <th className="p-2">Priority</th>
-          <th className="p-2">Assigned To</th>
-          {canManageTasks && <th className="p-2">Actions</th>}
+          <th className="p-2 w-16">Status</th>
+          <th className="p-2 w-1/3">Title</th>
+          <th className="p-2 w-28">Start Date</th>
+          <th className="p-2 w-28">Due Date</th>
+          <th className="p-2 w-24">Priority</th>
+          <th className="p-2 w-48">Assigned To</th>
+          {canManageTasks && <th className="p-2 w-24">Actions</th>}
         </tr>
       </thead>
       <tbody>
@@ -299,15 +301,26 @@ export default function TaskList() {
                 </div>
               </td>
               <td className="p-2">
-                <Button variant="link" className={cn(task.completed && 'line-through')} onClick={() => handleTaskClick(task)}>
-                  {task.title}
+                <Button
+                  variant="link"
+                  className={cn(
+                    "text-left break-words h-[56px] flex items-center",
+                    task.completed && "line-through"
+                  )}
+                  onClick={() => handleTaskClick(task)}
+                >
+                  <span className="inline-block max-w-[200px] whitespace-normal">
+                    {task.title}
+                  </span>
                 </Button>
               </td>
               <td className="p-2">{formatDate(task.startDate)}</td>
               <td className="p-2">{formatDate(task.dueDate)}</td>
-              <td className="p-2 flex items-center">
-                {getPriorityIcon(task.priority)}
-                <span className="ml-2">{task.priority}</span>
+              <td className="p-2">
+                <div className="flex items-center">
+                  {getPriorityIcon(task.priority)}
+                  <span className="ml-2">{task.priority}</span>
+                </div>
               </td>
               <td className="p-2">
                 {assignedUser ? (
@@ -319,7 +332,7 @@ export default function TaskList() {
                         <AvatarFallback>{assignedUser.email.charAt(0).toUpperCase()}</AvatarFallback>
                       )}
                     </Avatar>
-                    <span>{assignedUser.email}</span>
+                    <span className="truncate max-w-[120px]">{assignedUser.email}</span>
                   </div>
                 ) : (
                   <span>Unassigned</span>
@@ -327,127 +340,21 @@ export default function TaskList() {
               </td>
               {canManageTasks && (
                 <td className="p-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setEditingTask(task)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Edit Task</DialogTitle>
-                        <DialogDescription>
-                          Update the details of your task.
-                        </DialogDescription>
-                      </DialogHeader>
-                      {editingTask && (
-                        <div className="space-y-4">
-                          <Input
-                            value={editingTask.title}
-                            onChange={(e) =>
-                              setEditingTask({ ...editingTask, title: e.target.value })
-                            }
-                            placeholder="Task title"
-                          />
-                          <Textarea
-                            value={editingTask.description}
-                            onChange={(e) =>
-                              setEditingTask({ ...editingTask, description: e.target.value })
-                            }
-                            placeholder="Task description"
-                          />
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                <PlayCircle className="mr-2 h-4 w-4 text-green-500" />
-                                {editingTask.startDate ? formatDate(editingTask.startDate) : <span>Choose start date</span>}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={editingTask.startDate ? parseISO(editingTask.startDate) : undefined}
-                                onSelect={(date) =>
-                                  setEditingTask({
-                                    ...editingTask,
-                                    startDate: date ? toUTCDateString(date) : undefined,
-                                  })
-                                }
-                                disabled={disablePastDates}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                <FlagIcon className="mr-2 h-4 w-4 text-red-500" />
-                                {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Choose due date</span>}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={editingTask.dueDate ? parseISO(editingTask.dueDate) : undefined}
-                                onSelect={(date) =>
-                                  setEditingTask({
-                                    ...editingTask,
-                                    dueDate: date ? toUTCDateString(date) : undefined,
-                                  })
-                                }
-                                disabled={disablePastDates}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <Select
-                            value={editingTask.priority}
-                            onValueChange={(value: 'low' | 'medium' | 'high') =>
-                              setEditingTask({ ...editingTask, priority: value })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={editingTask.userId?.toString() || 'unassigned'}
-                            onValueChange={(value) =>
-                              setEditingTask({
-                                ...editingTask,
-                                userId: value === 'unassigned' ? null : parseInt(value),
-                              })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Assign to" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {users.map((user) => (
-                                <SelectItem key={user.id} value={user.id.toString()}>
-                                  {user.email}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button onClick={() => updateTask(editingTask)}>Save Changes</Button>
-                        </div>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingTask(task);
+                        setIsEditTaskDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </td>
               )}
             </tr>
@@ -458,41 +365,168 @@ export default function TaskList() {
   );
 
   return (
-    <div className="space-y-4">
-      {canManageTasks && (
-        <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Add Task
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Task</DialogTitle>
-              <DialogDescription>Enter the details for the new task.</DialogDescription>
-            </DialogHeader>
+    <div className="space-y-8">
+      {isLoading ? (
+        <p>Loading tasks...</p>
+      ) : tasks.length > 0 ? (
+        <>
+          <div className="overflow-x-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">In Progress</h2>
+              {canManageTasks && (
+                <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" /> Add Task
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Task</DialogTitle>
+                      <DialogDescription>Enter the details for the new task.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <Input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Task title" />
+                      <Textarea
+                        value={newDescription}
+                        onChange={(e) => setNewDescription(e.target.value)}
+                        placeholder="Task description"
+                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn('w-full justify-start text-left font-normal', !startDate && 'text-muted-foreground')}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {startDate ? formatDate(startDate) : <span>Start date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={startDate ? parseISO(startDate) : undefined}
+                            onSelect={(date) => setStartDate(date ? toUTCDateString(date) : undefined)}
+                            disabled={disablePastDates}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn('w-full justify-start text-left font-normal', !dueDate && 'text-muted-foreground')}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dueDate ? formatDate(dueDate) : <span>Due date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={dueDate ? parseISO(dueDate) : undefined}
+                            onSelect={(date) => setDueDate(date ? toUTCDateString(date) : undefined)}
+                            disabled={disablePastDates}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Select value={priority} onValueChange={(value: 'low' | 'medium' | 'high') => setPriority(value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={assignedUserId || 'unassigned'}
+                        onValueChange={(value) => setAssignedUserId(value === 'unassigned' ? null : value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Assign to" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {users.map((user) => (
+                            <SelectItem key={user.id} value={user.id.toString()}>
+                              {user.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={addTask}>Add Task</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+            {renderTaskTable(tasks.filter(task => !task.completed), false)}
+          </div>
+          <div className="overflow-x-auto">
+            <h2 className="text-xl font-bold mb-4">Completed</h2>
+            {renderTaskTable(tasks.filter(task => task.completed), true)}
+          </div>
+        </>
+      ) : (
+        <p>No tasks available.</p>
+      )}
+
+      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold break-words">{selectedTask?.title}</DialogTitle>
+          </DialogHeader>
+          <TaskDetails
+            selectedTask={selectedTask}
+            taskActivities={taskActivities}
+            users={users}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>Update the details of your task.</DialogDescription>
+          </DialogHeader>
+          {editingTask && (
             <div className="space-y-4">
-              <Input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Task title" />
+              <Input
+                value={editingTask.title}
+                onChange={(e) =>
+                  setEditingTask({ ...editingTask, title: e.target.value })
+                }
+                placeholder="Task title"
+              />
               <Textarea
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
+                value={editingTask.description}
+                onChange={(e) =>
+                  setEditingTask({ ...editingTask, description: e.target.value })
+                }
                 placeholder="Task description"
               />
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn('w-full justify-start text-left font-normal', !startDate && 'text-muted-foreground')}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? formatDate(startDate) : <span>Start date</span>}
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <PlayCircle className="mr-2 h-4 w-4 text-green-500" />
+                    {editingTask.startDate ? formatDate(editingTask.startDate) : <span>Choose start date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={startDate ? parseISO(startDate) : undefined}
-                    onSelect={(date) => setStartDate(date ? toUTCDateString(date) : undefined)}
+                    selected={editingTask.startDate ? parseISO(editingTask.startDate) : undefined}
+                    onSelect={(date) =>
+                      setEditingTask({
+                        ...editingTask,
+                        startDate: date ? toUTCDateString(date) : undefined,
+                      })
+                    }
                     disabled={disablePastDates}
                     initialFocus
                   />
@@ -500,25 +534,32 @@ export default function TaskList() {
               </Popover>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn('w-full justify-start text-left font-normal', !dueDate && 'text-muted-foreground')}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? formatDate(dueDate) : <span>Due date</span>}
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <FlagIcon className="mr-2 h-4 w-4 text-red-500" />
+                    {editingTask.dueDate ? formatDate(editingTask.dueDate) : <span>Choose due date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={dueDate ? parseISO(dueDate) : undefined}
-                    onSelect={(date) => setDueDate(date ? toUTCDateString(date) : undefined)}
+                    selected={editingTask.dueDate ? parseISO(editingTask.dueDate) : undefined}
+                    onSelect={(date) =>
+                      setEditingTask({
+                        ...editingTask,
+                        dueDate: date ? toUTCDateString(date) : undefined,
+                      })
+                    }
                     disabled={disablePastDates}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-              <Select value={priority} onValueChange={(value: 'low' | 'medium' | 'high') => setPriority(value)}>
+              <Select
+                value={editingTask.priority}
+                onValueChange={(value: 'low' | 'medium' | 'high') =>
+                  setEditingTask({ ...editingTask, priority: value })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
@@ -529,8 +570,13 @@ export default function TaskList() {
                 </SelectContent>
               </Select>
               <Select
-                value={assignedUserId || 'unassigned'}
-                onValueChange={(value) => setAssignedUserId(value === 'unassigned' ? null : value)}
+                value={editingTask.userId?.toString() || 'unassigned'}
+                onValueChange={(value) =>
+                  setEditingTask({
+                    ...editingTask,
+                    userId: value === 'unassigned' ? null : parseInt(value),
+                  })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Assign to" />
@@ -544,39 +590,9 @@ export default function TaskList() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={addTask}>Add Task</Button>
+              <Button onClick={() => updateTask(editingTask)}>Save Changes</Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {isLoading ? (
-        <p>Loading tasks...</p>
-      ) : tasks.length > 0 ? (
-        <div className="space-y-8">
-          <div className="overflow-x-auto">
-            <h2 className="text-xl font-bold mb-4">In Progress Tasks</h2>
-            {renderTaskTable(tasks.filter(task => !task.completed), false)}
-          </div>
-          <div className="overflow-x-auto">
-            <h2 className="text-xl font-bold mb-4">Completed Tasks</h2>
-            {renderTaskTable(tasks.filter(task => task.completed), true)}
-          </div>
-        </div>
-      ) : (
-        <p>No tasks available.</p>
-      )}
-
-      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">{selectedTask?.title}</DialogTitle>
-          </DialogHeader>
-          <TaskDetails
-            selectedTask={selectedTask}
-            taskActivities={taskActivities}
-            users={users}
-          />
+          )}
         </DialogContent>
       </Dialog>
     </div>

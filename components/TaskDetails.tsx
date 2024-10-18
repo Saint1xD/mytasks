@@ -133,6 +133,14 @@ export default function TaskDetails({ selectedTask, taskActivities, users }: Tas
                           </li>
                         );
                       }
+                      if (key === 'completed') {
+                        return (
+                          <li key={key}>
+                            <ActivityIcon className="inline-block mr-1 h-4 w-4" />
+                            Status: {value.from ? 'Completed' : 'In Progress'} → {value.to ? 'Completed' : 'In Progress'}
+                          </li>
+                        );
+                      }
                       return (
                         <li key={key} className="capitalize">
                           {key}: {value.from || 'Not set'} → {value.to || 'Not set'}
