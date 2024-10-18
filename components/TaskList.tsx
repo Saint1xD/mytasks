@@ -10,8 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, formatInTimeZone } from 'date-fns-tz';
-import { addDays } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { parseISO } from 'date-fns';
 import { CalendarIcon, Pencil, Trash2, ArrowUp, ArrowRight, ArrowDown, AlertTriangle, Clock, Plus, User as UserIcon, Calendar as CalendarIconSolid, PlayCircle, FlagIcon, ActivityIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,22 +41,6 @@ export default function TaskList() {
 
   const toUTCDateString = (date: Date) => {
     return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
-  };
-
-  const getUserEmailById = (userId: number | null) => {
-    const user = users.find(u => u.id === userId);
-    return user ? user.email : 'Unassigned';
-  };
-
-  const formatDateWithOffset = (dateString: string | undefined) => {
-    if (!dateString) return 'Not set';
-    const date = addDays(parseISO(dateString), 1);
-    return format(date, 'PPP');
-  };
-
-  const formatActivityDate = (dateString: string) => {
-    const date = parseISO(dateString);
-    return format(date, 'PPP p');
   };
 
   const fetchTasks = useCallback(async () => {
