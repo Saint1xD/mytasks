@@ -8,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function ProfilePage() {
-  const { user, login, updateAvatar } = useAuth();
+  const { user, updateUserInfo, updateAvatar } = useAuth();
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -19,11 +18,26 @@ export default function ProfilePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      setEmail(user.email);
-      setAvatarUrl(user.avatarUrl ? `/api/avatars/${user.avatarUrl.split('/').pop()}` : '');
-    }
-  }, [user]);
+    const fetchCurrentUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/user/current', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const currentUser = await response.json();
+          setEmail(currentUser.email);
+          setAvatarUrl(currentUser.avatarUrl ? `/api/avatars/${currentUser.avatarUrl.split('/').pop()}` : '');
+        }
+      } catch (error) {
+        console.error('Error fetching current user:', error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   const handleEmailChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +53,7 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const updatedUser = await response.json();
-        login(localStorage.getItem('token')!, updatedUser);
+        updateUserInfo(updatedUser);
         toast({
           title: "Email updated",
           description: "Your email has been successfully updated.",
@@ -98,8 +112,7 @@ export default function ProfilePage() {
   };
 
   if (!user) {
-    router.push('/login');
-    return null;
+    return <div>Loading...</div>;
   }
 
   return (
@@ -112,9 +125,9 @@ export default function ProfilePage() {
         <div className="flex items-center space-x-4">
           <Avatar className="w-24 h-24">
             {avatarUrl ? (
-              <Image src={avatarUrl} alt={user.email} width={96} height={96} />
+              <AvatarImage src={avatarUrl} alt={email} />
             ) : (
-              <AvatarFallback>{user.email[0].toUpperCase()}</AvatarFallback>
+              <AvatarFallback>{email && email[0].toUpperCase()}</AvatarFallback>
             )}
           </Avatar>
           <div>

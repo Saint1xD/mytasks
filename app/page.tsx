@@ -31,49 +31,11 @@ export default function Home() {
 
   return (
     <div className="container mx-auto p-4">
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold">Task Master</h1>
-        <div className="flex items-center space-x-4">
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="cursor-pointer">
-                  {avatarUrl ? (
-                    <Image src={avatarUrl} alt={user.email} width={40} height={40} />
-                  ) : (
-                    <AvatarFallback>{user.email[0].toUpperCase()}</AvatarFallback>
-                  )}
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center w-full cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={logout} className="flex items-center text-red-600 cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
-              <Link href="/login" className="text-blue-500 hover:underline">Login</Link>
-              <Link href="/register" className="text-blue-500 hover:underline">Register</Link>
-            </>
-          )}
-          <ModeToggle />
-        </div>
-      </header>
       <main className="flex flex-col lg:flex-row gap-8">
         <div className="lg:w-3/4">
           <TaskList />
         </div>
-        <div className="lg:w-1/4 lg:pt-[108px]">
+        <div className="lg:w-1/4 lg:mt-[72px]">
           <Dashboard />
         </div>
       </main>
