@@ -38,6 +38,3 @@ next-env.d.ts
 
 # avatars
 /public/avatars
-
-# script
-start-docker.sh
